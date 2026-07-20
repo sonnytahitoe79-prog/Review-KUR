@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aplikasi Review Kredit KUR — Kantor Pusat Bank NTT</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+<style>
+  :root{
+    --navy:#0b2545; --navy-2:#123a6b; --gold:#c8962c; --gold-light:#f4e3bd;
+    --bg:#f2f4f7; --card:#ffffff; --ink:#1c2733; --muted:#6b7686; --line:#dde3ea;
+    --ok:#1e8a5f; --warn:#b8791a; --bad:#b4332c;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  header.app{background:linear-gradient(120deg,var(--navy),var(--navy-2));color:#fff;padding:14px 20px;
+    display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15);position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:10px;}
+  header.app .brand{display:flex;align-items:center;gap:10px;}
+  header.app .mark{width:36px;height:36px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--navy);font-size:12px;text-align:center;}
+  header.app h1{font-size:15px;margin:0;font-weight:600;}
+  header.app .sub{font-size:11px;color:#cfd9e8;margin-top:2px;}
+  header.app .nav-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12.5px;}
+  header.app .nav-btn:hover{background:rgba(255,255,255,.22);}
+  main{max-width:1200px;margin:0 auto;padding:20px 16px 60px;}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--navy);color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;
+    box-shadow:0 4px 14px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;z-index:200;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy),var(--navy-2));padding:20px;}
+  .login-card{background:#fff;border-radius:14px;padding:32px 30px;max-width:400px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.25);}
+  .login-card h2{margin:0 0 4px;color:var(--navy);font-size:19px;}
+  .login-card .sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+  .login-card .field{margin-bottom:12px;}
+  .login-card .btn{width:100%;margin-top:6px;}
+  .login-card .note{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.5;}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  .toolbar input[type=text]{flex:1;min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;}
+  .toolbar select{padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;}
+  .btn{padding:9px 16px;border-radius:6px;border:1px solid transparent;font-size:13.5px;cursor:pointer;font-weight:600;}
+  .btn-primary{background:var(--navy);color:#fff;} .btn-primary:hover{background:var(--navy-2);}
+  .btn-gold{background:var(--gold);color:var(--navy);} .btn-gold:hover{background:#b98620;}
+  .btn-outline{background:#fff;border-color:var(--line);color:var(--ink);} .btn-outline:hover{border-color:var(--navy);}
+  .btn-danger{background:#fff;border-color:var(--bad);color:var(--bad);} .btn-danger:hover{background:var(--bad);color:#fff;}
+  .btn-sm{padding:5px 10px;font-size:12px;}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .kpi .num{font-size:22px;font-weight:700;color:var(--navy);}
+  .kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+
+  table.list{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+  table.list th{background:#eef1f6;text-align:left;padding:10px 12px;font-size:11.5px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--line);}
+  table.list td{padding:10px 12px;font-size:13px;border-bottom:1px solid var(--line);vertical-align:middle;}
+  table.list tr:last-child td{border-bottom:none;} table.list tr:hover{background:#f7f9fc;}
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+  .badge-baru{background:#e7ecf3;color:var(--navy-2);} .badge-review{background:#fdf1da;color:var(--warn);}
+  .badge-selesai{background:#e3f3ec;color:var(--ok);}
+  .badge-valid{background:#e3f3ec;color:var(--ok);} .badge-invalid{background:#fbe6e5;color:var(--bad);}
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);}
+
+  .case-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .case-header h2{margin:0 0 4px;font-size:18px;color:var(--navy);}
+  .case-header .meta{font-size:12px;color:var(--muted);}
+  .steps{display:flex;gap:5px;margin-bottom:16px;flex-wrap:wrap;}
+  .step{flex:1;min-width:100px;text-align:center;padding:8px 6px;border-radius:6px;background:#e7ecf3;color:var(--navy-2);font-size:11.5px;font-weight:600;cursor:pointer;}
+  .step.active{background:var(--navy);color:#fff;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px;}
+  .card h3{margin:0 0 4px;font-size:14px;color:var(--navy);border-bottom:2px solid var(--gold-light);padding-bottom:7px;}
+  .card .subhead{font-size:11.5px;color:var(--muted);margin:2px 0 12px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px 16px;}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px 16px;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .field input, .field select, .field textarea{padding:8px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;background:#fff;}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:2px solid var(--navy-2);outline-offset:1px;}
+  .full{grid-column:1/-1;}
+  .row-actions{display:flex;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:10px;}
+  .section-label{font-size:12.5px;font-weight:700;color:var(--navy-2);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.3px;}
+  .section-label:first-child{margin-top:0;}
+
+  .calc-box{background:#f7f9fc;border:1px dashed var(--line);border-radius:8px;padding:12px 15px;margin-top:8px;}
+  .calc-line{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px dotted var(--line);gap:12px;}
+  .calc-line:last-child{border-bottom:none;} .calc-line .v{font-weight:700;text-align:right;}
+  .calc-line.total{font-weight:700;border-top:1px solid var(--line);padding-top:6px;margin-top:4px;}
+
+  .flag{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:6px;font-size:13px;margin-bottom:8px;}
+  .flag-bad{background:#fbe6e5;color:var(--bad);} .flag-warn{background:#fdf1da;color:var(--warn);} .flag-ok{background:#e3f3ec;color:var(--ok);}
+  .checklist label{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;font-weight:400;}
+
+  .dropzone{border:2px dashed var(--line);border-radius:10px;padding:30px 20px;text-align:center;color:var(--muted);cursor:pointer;background:#f7f9fc;transition:.15s;}
+  .dropzone:hover, .dropzone.dragover{border-color:var(--navy-2);background:#eef1f6;}
+  .dropzone strong{color:var(--navy);}
+  .pdf-preview{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:12px;}
+  .pdf-preview embed{width:100%;height:520px;display:block;}
+  .detect-note{background:var(--gold-light);color:#7a5a12;padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:10px;}
+
+  .lak-doc{background:#fff;border:1px solid var(--line);}
+  .lak-head{display:flex;border:2px solid var(--navy);}
+  .lak-head .logo{width:90px;display:flex;align-items:center;justify-content:center;border-right:2px solid var(--navy);font-weight:800;color:var(--navy);font-size:13px;}
+  .lak-head .titleblock{flex:1;text-align:center;padding:8px;border-right:2px solid var(--navy);}
+  .lak-head .titleblock h4{margin:0;font-size:14px;color:var(--navy);}
+  .lak-head .titleblock .sub2{font-size:10.5px;color:var(--muted);}
+  .lak-head .docmeta{width:190px;font-size:9.5px;}
+  .lak-head .docmeta div{padding:4px 6px;border-bottom:1px solid var(--navy);}
+  .lak-head .docmeta div:last-child{border-bottom:none;}
+  .lak-section{margin-top:10px;}
+  .lak-section h5{background:var(--navy);color:#fff;font-size:12px;padding:5px 10px;margin:0;}
+  table.lak-table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  table.lak-table td, table.lak-table th{border:1px solid var(--line);padding:5px 7px;}
+  table.lak-table th{background:#eef1f6;font-size:10.5px;}
+  table.lak-table td.k{color:var(--muted);width:32%;}
+  .sig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:10px;border:1px solid var(--line);}
+  .sig-grid > div{border-right:1px solid var(--line);padding:10px;text-align:center;font-size:11px;min-height:90px;}
+  .sig-grid > div:last-child{border-right:none;}
+  .sig-grid .role{font-weight:700;color:var(--navy);margin-bottom:40px;}
+  .sig-grid .line{border-top:1px solid var(--ink);margin-top:4px;padding-top:3px;font-size:10px;color:var(--muted);}
+
+  footer.app{text-align:center;font-size:11px;color:var(--muted);padding:20px;}
+
+  @media print{
+    header.app, .toolbar, .steps, .row-actions, .no-print{display:none !important;}
+    body{background:#fff;} main{padding:0;max-width:100%;}
+    .card{box-shadow:none;border:none;padding:0;margin-bottom:8px;}
+  }
+  @media (max-width:760px){ .grid2,.grid3,.grid4,.kpi-row,.sig-grid{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<div id="view-login" class="login-wrap">
+  <div class="login-card">
+    <h2 id="loginTitle">Masuk — Analis Kantor Pusat</h2>
+    <div class="sub">Aplikasi Review Kredit KUR Mikro &amp; Kecil — Divisi Kredit Mikro, Kecil dan Konsumer, Bank NTT</div>
+    <div id="loginPanel">
+      <div class="field"><label>Nama Analis</label><input id="loginNama" placeholder="Nama lengkap analis"></div>
+      <div class="field"><label>Password</label><input id="loginPassword" type="password" placeholder="Password"></div>
+      <div class="field" id="regSecurityWrap" style="display:none;">
+        <label>Buat Pertanyaan Keamanan (untuk reset password nanti)</label>
+        <input id="regSecQuestion" placeholder='Contoh: "Nama hewan peliharaan pertama?"' style="margin-bottom:8px;">
+        <label>Jawaban Keamanan</label>
+        <input id="regSecAnswer" placeholder="Jawaban Anda">
+      </div>
+      <button class="btn btn-primary" id="btnPrimaryLogin" onclick="handlePrimaryLoginClick()">Masuk</button>
+      <button class="btn btn-outline" onclick="toggleDaftarMode()" id="btnToggleDaftar">Daftar Akun Baru</button>
+      <div style="text-align:center;margin-top:10px;"><a href="#" onclick="bukaLupaPassword();return false;" style="font-size:12.5px;color:var(--navy-2);">Lupa Kata Sandi?</a></div>
+    </div>
+    <div id="forgotPanel" style="display:none;">
+      <div class="field"><label>Nama Analis</label><input id="forgotNama" placeholder="Nama lengkap analis"></div>
+      <button class="btn btn-outline" onclick="cariAkunLupaPassword()">Cari Akun</button>
+      <div id="forgotStep2" style="display:none;margin-top:10px;">
+        <div class="field"><label id="forgotQuestionLabel" style="color:var(--ink);font-weight:400;"></label><input id="forgotAnswer" placeholder="Jawaban keamanan"></div>
+        <div class="field"><label>Password Baru</label><input id="forgotNewPassword" type="password" placeholder="Password baru"></div>
+        <button class="btn btn-primary" onclick="resetPasswordAO()">Reset Password</button>
+      </div>
+      <div style="text-align:center;margin-top:10px;"><a href="#" onclick="tutupLupaPassword();return false;" style="font-size:12.5px;color:var(--navy-2);">&larr; Kembali ke Masuk</a></div>
+    </div>
+    <div class="note">Catatan: identifikasi dasar per perangkat/browser (data tersimpan lokal, tidak terhubung ke server). Bukan sistem keamanan berlapis.<br><strong>Versi Build: 2026-07-13-R3</strong></div>
+  </div>
+</div>
+
+<header class="app" style="display:none;">
+  <div class="brand">
+    <div class="mark">KP</div>
+    <div><h1>Aplikasi Review Kredit KUR — Kantor Pusat</h1><div class="sub">Divisi Kredit Mikro, Kecil dan Konsumer — Bank NTT</div></div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <span style="color:#cfd9e8;font-size:12.5px;">Analis: <strong id="currentAOLabel" style="color:#fff;"></strong></span>
+    <button class="nav-btn no-lock" onclick="logoutAO()">Keluar / Ganti Pengguna</button>
+    <button class="nav-btn no-lock" onclick="goDashboard()">Daftar Berkas</button>
+    <button class="nav-btn no-lock" onclick="newCase()">+ Terima Berkas Baru</button>
+  </div>
+</header>
+
+<main id="mainContent" style="display:none;">
+
+  <!-- ================= DASHBOARD ================= -->
+  <div id="view-dashboard">
+    <div class="kpi-row">
+      <div class="kpi"><div class="num" id="kpiTotal">0</div><div class="lbl">Total Berkas Masuk</div></div>
+      <div class="kpi"><div class="num" id="kpiBaru">0</div><div class="lbl">Baru Diterima</div></div>
+      <div class="kpi"><div class="num" id="kpiReview">0</div><div class="lbl">Dalam Review</div></div>
+      <div class="kpi"><div class="num" id="kpiSelesai">0</div><div class="lbl">Selesai Direview</div></div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="searchBox" placeholder="Cari nama debitur / NIK / cabang..." oninput="renderList()">
+      <select id="filterStatus" onchange="renderList()">
+        <option value="">Semua Status</option><option value="baru">Baru Diterima</option><option value="review">Dalam Review</option><option value="selesai">Selesai</option>
+      </select>
+      <select id="filterJenis" onchange="renderList()">
+        <option value="">Semua Jenis KUR</option><option value="Mikro">KUR Mikro</option><option value="Kecil">KUR Kecil</option>
+      </select>
+    </div>
+    <table class="list">
+      <thead><tr><th>Debitur</th><th>Cabang Asal</th><th>Jenis KUR</th><th>Plafon</th><th>Alasan Eskalasi</th><th>Status</th><th>Rekomendasi</th><th></th></tr></thead>
+      <tbody id="listBody"></tbody>
+    </table>
+    <div id="emptyMsg" class="empty" style="display:none;">Belum ada berkas yang diterima. Klik "+ Terima Berkas Baru" untuk mulai.</div>
+  </div>
+
+  <!-- ================= CASE VIEW ================= -->
+  <div id="view-case" style="display:none;">
+    <div class="case-header">
+      <div><h2 id="caseTitleName">Berkas Baru</h2><div class="meta" id="caseTitleMeta">Belum disimpan</div><div class="meta" id="saveStatus" style="color:var(--ok);font-weight:600;margin-top:2px;"></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary no-lock" onclick="simpanManual()">Simpan</button>
+        <button class="btn btn-danger no-lock" onclick="deleteCurrentCase()">Hapus</button>
+      </div>
+    </div>
+
+    <!-- UPLOAD (selalu terlihat) -->
+    <div class="card">
+      <h3>Upload Berkas dari Cabang</h3>
+      <div class="subhead">Upload PDF gabungan berisi LAK + Persyaratan KUR Mikro/Kecil (dan SLIK jika sudah termasuk di dalamnya). Begitu diunggah, aplikasi otomatis membaca (langsung/OCR bila hasil scan), memisahkan per jenis dokumen (KTP, KK, LAK, CM, dst), <strong>membandingkan data antar dokumen untuk mendeteksi ketidaksesuaian</strong> (nama/NIK/plafon berbeda, dsb — bukan sekadar cek lengkap/tidak), menjalankan evaluasi eskalasi, dan menyusun hasil review di bawah.</div>
+      <div class="dropzone no-print" id="dropzone" onclick="document.getElementById('pdfInput').click()">
+        <strong>Klik untuk pilih file PDF Utama</strong><br>atau tarik & lepas file ke sini
+      </div>
+      <input type="file" id="pdfInput" accept="application/pdf" style="display:none" onchange="handlePdfUpload(event)">
+      <div id="pdfStatus" class="subhead" style="margin-top:8px;"></div>
+      <div id="pdfPreviewWrap"></div>
+      <div class="row-actions no-print" id="retryOcrWrap" style="display:none;justify-content:flex-start;margin-top:8px;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="cobaOcrUlang()">Coba Baca Ulang PDF (OCR)</button>
+        <button class="btn btn-outline btn-sm" onclick="salinTeksEkstraksi()">Salin Teks Hasil Ekstraksi (untuk ditinjau manual oleh AI)</button>
+      </div>
+      <div class="subhead" id="salinTeksHint" style="margin-top:2px;">Aplikasi ini hanya bisa mendeteksi ketidaksesuaian yang polanya bisa dirumuskan (NIK/nama/plafon beda, dsb). Untuk analisis kontekstual yang lebih dalam (mis. salah hitung, kontradiksi antar-kalimat), salin teks di atas lalu tempel ke chat Claude.ai untuk ditinjau manual.</div>
+
+      <div class="section-label" style="margin-top:16px;">Berkas SLIK Terpisah (opsional)</div>
+      <div class="subhead">Kalau SLIK dikirim cabang sebagai file terpisah (bukan tergabung di PDF utama), upload di sini. Datanya akan digabung untuk deteksi kolektibilitas &amp; tunggakan.</div>
+      <div class="dropzone no-print" id="dropzoneSlik" onclick="document.getElementById('pdfSlikInput').click()">
+        <strong>Klik untuk pilih file PDF SLIK</strong><br>atau tarik & lepas file ke sini
+      </div>
+      <input type="file" id="pdfSlikInput" accept="application/pdf" style="display:none" onchange="handleSlikPdfUpload(event)">
+      <div id="pdfSlikStatus" class="subhead" style="margin-top:8px;"></div>
+      <div id="pdfSlikPreviewWrap"></div>
+    </div>
+
+    <div id="resultsWrap" style="display:none;">
+      <div class="card">
+        <h3>Cek Konsistensi Data Antar Dokumen</h3>
+        <div class="subhead">Dibandingkan otomatis antar bagian dokumen yang terbaca (KTP, KK, LAK, CM, Formulir, dst): NIK/nama/plafon berbeda, NPWP≠NIK, kontradiksi data pekerjaan, judul RAB tidak sesuai isi, status kawin tanpa data pasangan. Ini heuristik berbasis pola teks — <strong>bukan</strong> analisis kontekstual penuh (mis. salah hitung dalam tabel, kontradiksi antar kalimat yang butuh pemahaman). Untuk itu, gunakan tombol "Salin Teks Hasil Ekstraksi" di atas dan tinjau manual lewat chat Claude.ai. Tetap verifikasi ke berkas asli sebelum diputuskan.</div>
+        <div id="konsistensiArea" style="margin-top:6px;"></div>
+        <div id="segmentTableWrap" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <h3>Hasil Review — Siap Cetak</h3>
+        <div id="detectNote" class="detect-note" style="display:none;"></div>
+        <div id="flagArea" style="margin-top:6px;"></div>
+        <div class="row-actions no-print" style="margin-top:12px;justify-content:flex-start;">
+          <button class="btn btn-primary" onclick="renderCatatanReview();window.print();">Cetak / Simpan sebagai PDF</button>
+        </div>
+        <div id="memoArea" style="margin-top:16px;"></div>
+      </div>
+
+      <div class="card" style="padding:0;">
+        <div onclick="toggleDetailManual()" style="cursor:pointer;padding:18px 20px;font-weight:700;color:var(--navy);display:flex;justify-content:space-between;align-items:center;">
+          <span>Detail & Koreksi Manual (opsional — ketuk untuk buka kalau ada yang perlu diperbaiki)</span>
+          <span id="detailManualArrow">&#9656;</span>
+        </div>
+        <div id="detailManualBody" style="display:none;padding:0 20px 20px;">
+
+        <div class="section-label" style="margin-top:10px;">Info Eskalasi</div>
+        <div class="grid3">
+          <div class="field"><label>Cabang / Capem Pengusul</label><input id="f_cabangAsal" oninput="autosave()"></div>
+          <div class="field"><label>AO Pengusul di Cabang</label><input id="f_aoPengusulCabang" oninput="autosave()"></div>
+          <div class="field"><label>Status NPL Konsolidasi Cabang</label>
+            <select id="f_statusNplKonsolidasi" onchange="evaluasiUlangSemua();autosave()"><option value="Tidak">Tidak (NPL ≤5%)</option><option value="Ya">Ya (NPL Konsolidasi &gt;5%)</option></select>
+          </div>
+          <div class="field"><label>Angka NPL Konsolidasi Cabang (%)</label><input type="number" step="0.1" id="f_nplPersen" oninput="evaluasiUlangSemua();autosave()"></div>
+          <div class="field"><label>Jenis KUR</label><select id="f_jenisKur" onchange="evaluasiUlangSemua();autosave()"><option value="Mikro">KUR Mikro</option><option value="Kecil">KUR Kecil</option></select></div>
+          <div class="field"><label>Plafon Diajukan (Rp)</label><input type="number" id="f_plafon" oninput="evaluasiUlangSemua();autosave()"></div>
+        </div>
+        <div class="calc-box" style="margin-top:10px;">
+          <div class="calc-line total"><span>Alasan Eskalasi</span><span class="v" id="c_alasanEskalasi">-</span></div>
+          <div class="calc-line"><span>Status Validitas Eskalasi</span><span class="v" id="c_validEskalasi">-</span></div>
+        </div>
+
+        <div class="section-label">Data Debitur</div>
+        <div class="grid3">
+          <div class="field"><label>Nama Debitur</label><input id="f_nama" oninput="autosave()"></div>
+          <div class="field"><label>NIK</label><input id="f_nik" oninput="autosave()"></div>
+          <div class="field"><label>Sektor Usaha</label><input id="f_sektor" oninput="autosave()"></div>
+          <div class="field"><label>Lama Usaha (tahun)</label><input type="number" step="0.5" id="f_lamaUsaha" oninput="autosave()"></div>
+          <div class="field"><label>Jangka Waktu Kredit (bulan)</label><input type="number" id="f_jangkaWaktu" oninput="autosave()"></div>
+          <div class="field"><label>Suku Bunga (%/tahun)</label><input type="number" step="0.1" id="f_bunga" oninput="autosave()"></div>
+          <div class="field full"><label>Tujuan Penggunaan</label><input id="f_tujuan" oninput="autosave()"></div>
+        </div>
+
+        <div class="section-label">Hasil Analisa dari Cabang (LAK) & Hitung Ulang Kantor Pusat</div>
+        <div class="grid3">
+          <div class="field"><label>Laba Kotor Usaha (Rp)</label><input type="number" id="f_labaKotor" oninput="evaluasiUlangSemua();autosave()"></div>
+          <div class="field"><label>Biaya Operasional / Bulan (Rp)</label><input type="number" id="f_biayaOperasional" oninput="evaluasiUlangSemua();autosave()"></div>
+          <div class="field"><label>Angsuran / Bulan (Rp)</label><input type="number" id="f_angsuran" oninput="evaluasiUlangSemua();autosave()"></div>
+          <div class="field"><label>RKB/DSCR menurut Cabang</label><input type="number" step="0.01" id="f_rkbCabang" oninput="evaluasiUlangSemua();autosave()"></div>
+          <div class="field"><label>Skor Profil Debitur (Cabang)</label><input type="number" id="f_skorProfilCabang" oninput="autosave()"></div>
+          <div class="field"><label>Klasifikasi Profil Debitur (Cabang)</label><select id="f_profilLabelCabang" onchange="autosave()"><option value="">- Pilih -</option><option>Profil Debitur 1</option><option>Profil Debitur 2</option><option>Profil Debitur 3</option></select></div>
+        </div>
+        <div class="calc-box">
+          <div class="calc-line"><span>Pendapatan Bersih (Laba Kotor − Biaya Operasional)</span><span class="v" id="c_pendapatanBersihUlang">-</span></div>
+          <div class="calc-line total"><span>RKB/DSCR Hasil Hitung Ulang Kantor Pusat</span><span class="v" id="c_rkbUlang">-</span></div>
+          <div class="calc-line"><span>Selisih terhadap Perhitungan Cabang</span><span class="v" id="c_selisihRkb">-</span></div>
+        </div>
+
+        <div class="section-label">SLIK OJK</div>
+        <div class="grid3">
+          <div class="field"><label>Kolektibilitas Tertinggi 24 Bulan Terakhir</label>
+            <select id="f_kolektibilitas" onchange="evaluasiUlangSemua();autosave()">
+              <option value="1">1 - Lancar</option><option value="2">2 - Dalam Perhatian Khusus</option>
+              <option value="3">3 - Kurang Lancar</option><option value="4">4 - Diragukan</option><option value="5">5 - Macet</option>
+            </select>
+          </div>
+          <div class="field"><label>Lama Tunggakan Terakhir (hari)</label><input type="number" id="f_tunggakan" oninput="evaluasiUlangSemua();autosave()"></div>
+          <div class="field full"><label>Catatan SLIK Lainnya</label><textarea id="f_catatanSlik" rows="2" oninput="autosave()"></textarea></div>
+        </div>
+
+        <div class="section-label">Checklist Kelengkapan Berkas Eskalasi</div>
+        <div class="subhead">Dicentang otomatis berdasarkan kata kunci yang terdeteksi di PDF — deteksi kata kunci bukan bukti dokumen benar-benar lengkap/sah, koreksi di sini kalau perlu.</div>
+        <div class="grid2" id="checklistWrap"></div>
+        <div class="field full" style="margin-top:10px;"><label>Catatan Kelengkapan Berkas</label><textarea id="f_catatanKelengkapan" rows="2" oninput="autosave()"></textarea></div>
+
+        <div class="section-label">Review & Rekomendasi Kantor Pusat</div>
+        <div class="grid2">
+          <div class="field"><label>Kesesuaian Analisa Cabang</label>
+            <select id="f_reviewKesesuaian" onchange="autosave()"><option value="">- Pilih -</option><option>Sesuai</option><option>Sesuai dengan Catatan Minor</option><option>Tidak Sesuai / Perlu Klarifikasi</option></select>
+          </div>
+          <div class="field"><label>Rekomendasi Kantor Pusat</label>
+            <select id="f_rekomendasiPusat" onchange="autosave();renderList()"><option value="">- Pilih -</option><option>Setuju dengan Usulan Cabang</option><option>Setuju dengan Syarat Tambahan</option><option>Tidak Setuju</option><option>Dikembalikan ke Cabang — Berkas Kurang Lengkap</option></select>
+          </div>
+          <div class="field full"><label>Catatan Tambahan Reviewer Pusat</label><textarea id="f_reviewCatatanTambahan" rows="3" oninput="autosave()"></textarea></div>
+        </div>
+
+        <div class="section-label">Catatan Review untuk Komite</div>
+        <div class="field full"><label>Ringkasan untuk Komite</label><textarea id="f_catatanUntukKomite" rows="6" oninput="autosave()"></textarea></div>
+
+        <div class="row-actions no-print" style="margin-top:16px;">
+          <button class="btn btn-outline" onclick="goDashboard()">&larr; Kembali ke Daftar</button>
+          <button class="btn btn-gold" onclick="evaluasiUlangSemua()">Hitung / Buat Ulang Semua Otomatis</button>
+        </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+<footer class="app" id="footerApp" style="display:none;">Aplikasi internal Bank NTT — Divisi Kredit Mikro, Kecil dan Konsumer. Data tersimpan lokal per perangkat (localStorage).<br><strong>Versi Build: 2026-07-13-R3 (OCR ditingkatkan + tombol coba ulang)</strong></footer>
+
+<script>
+/* =============== KONFIGURASI PDF.JS =============== */
+if(window.pdfjsLib){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+function toggleDetailManual(){
+  const body = document.getElementById('detailManualBody');
+  const arrow = document.getElementById('detailManualArrow');
+  const opening = !body.style.display || body.style.display === 'none';
+  body.style.display = opening ? 'block' : 'none';
+  arrow.innerHTML = opening ? '&#9662;' : '&#9656;';
+}
+
+const STORE_KEY = 'kur_review_pusat_v1';
+const AO_KEY = 'kur_review_analis_v1';
+const CURRENT_AO_KEY = 'kur_review_current_analis_v1';
+let currentId = null;
+
+/* =============== LOGIN ANALIS PUSAT =============== */
+function loadAOAccounts(){ try{ return JSON.parse(localStorage.getItem(AO_KEY)) || []; }catch(e){ return []; } }
+function saveAOAccounts(list){ localStorage.setItem(AO_KEY, JSON.stringify(list)); }
+function simpleEncode(pw){ try{ return btoa(unescape(encodeURIComponent(pw))); }catch(e){ return pw; } }
+function getCurrentAO(){ return localStorage.getItem(CURRENT_AO_KEY) || ''; }
+let isDaftarMode = false;
+let forgotAccountNama = null;
+function toggleDaftarMode(){
+  isDaftarMode = !isDaftarMode;
+  document.getElementById('regSecurityWrap').style.display = isDaftarMode ? 'block' : 'none';
+  document.getElementById('btnPrimaryLogin').textContent = isDaftarMode ? 'Daftar' : 'Masuk';
+  document.getElementById('btnToggleDaftar').textContent = isDaftarMode ? 'Sudah Punya Akun? Masuk' : 'Daftar Akun Baru';
+  document.getElementById('loginTitle').textContent = isDaftarMode ? 'Daftar Akun Analis Baru' : 'Masuk — Analis Kantor Pusat';
+}
+function handlePrimaryLoginClick(){ if(isDaftarMode) daftarAO(); else loginAO(); }
+function daftarAO(){
+  const nama = document.getElementById('loginNama').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  const secQ = document.getElementById('regSecQuestion').value.trim();
+  const secA = document.getElementById('regSecAnswer').value.trim();
+  if(!nama || !pw){ alert('Isi Nama Analis dan Password terlebih dahulu.'); return; }
+  if(!secQ || !secA){ alert('Isi juga pertanyaan dan jawaban keamanan.'); return; }
+  let accounts = loadAOAccounts();
+  if(accounts.find(a=>a.nama.toLowerCase()===nama.toLowerCase())){ alert('Nama ini sudah terdaftar. Gunakan tombol "Masuk".'); return; }
+  accounts.push({nama, pw: simpleEncode(pw), secQ, secA: simpleEncode(secA.trim().toLowerCase())});
+  saveAOAccounts(accounts);
+  setCurrentAO(nama);
+}
+function loginAO(){
+  const nama = document.getElementById('loginNama').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  if(!nama || !pw){ alert('Isi Nama Analis dan Password terlebih dahulu.'); return; }
+  const accounts = loadAOAccounts();
+  const acc = accounts.find(a=>a.nama.toLowerCase()===nama.toLowerCase());
+  if(!acc){ alert('Nama belum terdaftar. Klik "Daftar Akun Baru".'); return; }
+  if(acc.pw !== simpleEncode(pw)){ alert('Password salah.'); return; }
+  setCurrentAO(acc.nama);
+}
+function bukaLupaPassword(){
+  document.getElementById('loginPanel').style.display='none';
+  document.getElementById('forgotPanel').style.display='block';
+  document.getElementById('loginTitle').textContent = 'Lupa Kata Sandi';
+  document.getElementById('forgotStep2').style.display='none';
+}
+function tutupLupaPassword(){
+  document.getElementById('forgotPanel').style.display='none';
+  document.getElementById('loginPanel').style.display='block';
+  document.getElementById('loginTitle').textContent = isDaftarMode ? 'Daftar Akun Analis Baru' : 'Masuk — Analis Kantor Pusat';
+}
+function cariAkunLupaPassword(){
+  const nama = document.getElementById('forgotNama').value.trim();
+  if(!nama){ alert('Isi nama terlebih dahulu.'); return; }
+  const accounts = loadAOAccounts();
+  const acc = accounts.find(a=>a.nama.toLowerCase()===nama.toLowerCase());
+  if(!acc){ alert('Nama tidak ditemukan di perangkat ini.'); return; }
+  if(!acc.secQ){ alert('Akun ini belum memiliki pertanyaan keamanan.'); return; }
+  forgotAccountNama = acc.nama;
+  document.getElementById('forgotQuestionLabel').textContent = acc.secQ;
+  document.getElementById('forgotStep2').style.display='block';
+}
+function resetPasswordAO(){
+  const answer = document.getElementById('forgotAnswer').value;
+  const newPw = document.getElementById('forgotNewPassword').value;
+  if(!answer || !newPw){ alert('Isi jawaban keamanan dan password baru.'); return; }
+  let accounts = loadAOAccounts();
+  const idx = accounts.findIndex(a=>a.nama===forgotAccountNama);
+  if(idx<0){ alert('Terjadi kesalahan, ulangi pencarian akun.'); return; }
+  if(accounts[idx].secA !== simpleEncode(answer.trim().toLowerCase())){ alert('Jawaban keamanan tidak cocok.'); return; }
+  accounts[idx].pw = simpleEncode(newPw);
+  saveAOAccounts(accounts);
+  alert('Password berhasil direset. Silakan masuk dengan password baru.');
+  document.getElementById('loginNama').value = forgotAccountNama;
+  tutupLupaPassword();
+}
+function setCurrentAO(nama){
+  localStorage.setItem(CURRENT_AO_KEY, nama);
+  initAfterLogin();
+}
+function logoutAO(){
+  if(!confirm('Keluar dari sesi ini?')) return;
+  localStorage.removeItem(CURRENT_AO_KEY);
+  location.reload();
+}
+function initAfterLogin(){
+  document.getElementById('view-login').style.display='none';
+  document.querySelector('header.app').style.display='flex';
+  document.getElementById('mainContent').style.display='block';
+  document.getElementById('footerApp').style.display='block';
+  document.getElementById('currentAOLabel').textContent = getCurrentAO();
+  goDashboard();
+}
+
+/* =============== DATA CASE =============== */
+function loadCases(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }catch(e){ return []; } }
+function saveCases(cases){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(cases));
+    return true;
+  }catch(e){
+    const isQuota = e && (e.name==='QuotaExceededError' || e.code===22 || e.code===1014);
+    if(!isQuota){ console.error('Gagal menyimpan data:', e); return false; }
+    // Penyimpanan penuh — coba bebaskan ruang dengan mengosongkan pratinjau PDF berkas LAIN (bukan yang sedang dibuka)
+    let trimmed = cases.map(c=>{
+      if(c.id===currentId) return c;
+      const clone = Object.assign({}, c);
+      if(clone.pdfBase64) clone.pdfBase64 = '';
+      if(clone.pdfSlikBase64) clone.pdfSlikBase64 = '';
+      return clone;
+    });
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(trimmed));
+      showToast('Penyimpanan browser hampir penuh — pratinjau PDF berkas lain dikosongkan otomatis untuk menghemat ruang.');
+      return true;
+    }catch(e2){
+      // Masih penuh — kosongkan juga PDF berkas yang sedang dibuka (hasil review tetap tersimpan, hanya pratinjau PDF-nya yang tidak permanen)
+      let trimmed2 = cases.map(c=>{
+        const clone = Object.assign({}, c);
+        if(clone.pdfBase64) clone.pdfBase64 = '';
+        if(clone.pdfSlikBase64) clone.pdfSlikBase64 = '';
+        return clone;
+      });
+      try{
+        localStorage.setItem(STORE_KEY, JSON.stringify(trimmed2));
+        showToast('Penyimpanan browser penuh — file PDF ini hanya tersimpan sementara di sesi ini (tidak permanen), tapi hasil review tetap tersimpan.');
+        return false;
+      }catch(e3){
+        console.error('Penyimpanan browser penuh total, gagal menyimpan:', e3);
+        showToast('Penyimpanan browser penuh — data mungkin tidak tersimpan. Coba hapus berkas lama atau gunakan perangkat lain.');
+        return false;
+      }
+    }
+  }
+}
+function fmtRp(n){ n = Number(n)||0; return 'Rp ' + n.toLocaleString('id-ID'); }
+function errMsg(e){
+  try{
+    if(!e) return 'Kesalahan tidak diketahui';
+    if(typeof e === 'string') return e;
+    if(e.message) return e.message;
+    return String(e);
+  }catch(_){ return 'Kesalahan tidak diketahui'; }
+}
+function num(id){ const el=document.getElementById(id); return el ? (Number(el.value)||0) : 0; }
+function uid(){ return 'r_'+Date.now()+'_'+Math.floor(Math.random()*10000); }
+function showToast(msg){
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(window._toastTimer); window._toastTimer = setTimeout(()=>t.classList.remove('show'), 1400);
+}
+
+const FIELD_IDS = ['cabangAsal','aoPengusulCabang','statusNplKonsolidasi','nplPersen','jenisKur','plafon',
+  'nama','nik','sektor','lamaUsaha','jangkaWaktu','bunga','tujuan',
+  'labaKotor','biayaOperasional','angsuran','rkbCabang','skorProfilCabang','profilLabelCabang',
+  'kolektibilitas','tunggakan','catatanSlik','catatanKelengkapan',
+  'reviewKesesuaian','rekomendasiPusat','reviewCatatanTambahan','catatanUntukKomite'];
+
+const REVIEW_CHECKLIST_ITEMS = [
+  {key:'lak', label:'Laporan Analisa Kredit (LAK) dari Cabang', group:'Paket Eskalasi Utama'},
+  {key:'cm', label:'Credit Memorandum (CM) dari Cabang', group:'Paket Eskalasi Utama'},
+  {key:'slik', label:'Hasil SLIK OJK / BI Checking', group:'Paket Eskalasi Utama'},
+  {key:'formulirPermohonan', label:'Formulir Permohonan Kredit', group:'Paket Eskalasi Utama'},
+  {key:'ktp', label:'Fotokopi KTP Pemohon (+Pasangan)', group:'Dokumen Identitas'},
+  {key:'kk', label:'Kartu Keluarga', group:'Dokumen Identitas'},
+  {key:'sku', label:'Surat Keterangan Usaha (SKU)', group:'Dokumen Legalitas Usaha'},
+  {key:'nib', label:'NIB / Izin Usaha', group:'Dokumen Legalitas Usaha'},
+  {key:'npwp', label:'NPWP (wajib >Rp50 juta)', group:'Dokumen Legalitas Usaha'},
+  {key:'agunanDok', label:'Dokumen Agunan (SHM/BPKB) — khusus KUR Kecil', group:'Dokumen Agunan'},
+  {key:'fotoLokasi', label:'Foto Lokasi Usaha dan Agunan', group:'Dokumen Tambahan'},
+  {key:'suratPermohonanBermeterai', label:'Surat Permohonan Kredit Bermeterai', group:'Dokumen Tambahan'},
+];
+
+function blankCase(){
+  const c = { id: uid(), createdAt: new Date().toISOString(), status:'baru', locked:false,
+    checklist:{}, pdfName:'', pdfText:'', pdfBase64:'', pdfSlikName:'', pdfSlikText:'', pdfSlikBase64:'' };
+  FIELD_IDS.forEach(f=>c['f_'+f] = '');
+  c.f_statusNplKonsolidasi='Tidak'; c.f_jenisKur='Mikro';
+  REVIEW_CHECKLIST_ITEMS.forEach(it=>c.checklist[it.key]=false);
+  return c;
+}
+
+/* =============== DASHBOARD =============== */
+function goDashboard(){
+  document.getElementById('view-case').style.display='none';
+  document.getElementById('view-dashboard').style.display='block';
+  renderList();
+}
+function renderList(){
+  const cases = loadCases();
+  const q = (document.getElementById('searchBox').value||'').toLowerCase();
+  const fStatus = document.getElementById('filterStatus').value;
+  const fJenis = document.getElementById('filterJenis').value;
+  let filtered = cases.filter(c=>{
+    const matchQ = !q || (c.f_nama||'').toLowerCase().includes(q) || (c.f_nik||'').includes(q) || (c.f_cabangAsal||'').toLowerCase().includes(q);
+    const matchStatus = !fStatus || c.status===fStatus;
+    const matchJenis = !fJenis || c.f_jenisKur===fJenis;
+    return matchQ && matchStatus && matchJenis;
+  });
+  document.getElementById('kpiTotal').textContent = cases.length;
+  document.getElementById('kpiBaru').textContent = cases.filter(c=>c.status==='baru').length;
+  document.getElementById('kpiReview').textContent = cases.filter(c=>c.status==='review').length;
+  document.getElementById('kpiSelesai').textContent = cases.filter(c=>c.status==='selesai').length;
+  const body = document.getElementById('listBody'); body.innerHTML='';
+  document.getElementById('emptyMsg').style.display = filtered.length? 'none':'block';
+  filtered.sort((a,b)=> (b.createdAt||'').localeCompare(a.createdAt||''));
+  filtered.forEach(c=>{
+    const tr = document.createElement('tr');
+    const statusBadge = c.status==='baru' ? '<span class="badge badge-baru">Baru</span>' : c.status==='review' ? '<span class="badge badge-review">Dalam Review</span>' : '<span class="badge badge-selesai">Selesai</span>';
+    const ev = c.eskalasi || {};
+    const validBadge = ev.valid===true ? '<span class="badge badge-valid">Valid</span>' : ev.valid===false ? '<span class="badge badge-invalid">Perlu Klarifikasi</span>' : '-';
+    tr.innerHTML = `
+      <td><strong>${c.f_nama||'(tanpa nama)'}</strong><br><span style="color:var(--muted);font-size:11px;">${c.f_nik||''}</span></td>
+      <td>${c.f_cabangAsal||'-'}</td><td>${c.f_jenisKur||''}</td><td>${fmtRp(c.f_plafon)}</td>
+      <td style="max-width:220px;font-size:12px;">${ev.alasan||'-'} ${validBadge}</td>
+      <td>${statusBadge}</td><td>${c.f_rekomendasiPusat||'-'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openCase('${c.id}')">Buka</button></td>`;
+    body.appendChild(tr);
+  });
+}
+function newCase(){ const cases = loadCases(); const c = blankCase(); cases.push(c); saveCases(cases); openCase(c.id); }
+function deleteCurrentCase(){ if(!currentId) return; if(!confirm('Hapus berkas review ini secara permanen?')) return; saveCases(loadCases().filter(c=>c.id!==currentId)); goDashboard(); }
+
+/* =============== CASE FORM =============== */
+function openCase(id){
+  currentId = id;
+  const c = loadCases().find(x=>x.id===id); if(!c) return;
+  document.getElementById('view-dashboard').style.display='none';
+  document.getElementById('view-case').style.display='block';
+  FIELD_IDS.forEach(f=>{ const el = document.getElementById('f_'+f); if(el) el.value = c['f_'+f] !== undefined && c['f_'+f]!==null ? c['f_'+f] : ''; });
+  if(!c.checklist) c.checklist = {};
+  renderChecklistUI(c);
+  document.getElementById('caseTitleName').textContent = c.f_nama || '(Berkas Baru)';
+  document.getElementById('caseTitleMeta').textContent = 'ID: '+c.id+' • Status: '+c.status;
+  document.getElementById('saveStatus').textContent = '';
+  document.getElementById('detectNote').style.display='none';
+  document.getElementById('flagArea').innerHTML='';
+  const kArea = document.getElementById('konsistensiArea'); if(kArea) kArea.innerHTML='';
+  const sArea = document.getElementById('segmentTableWrap'); if(sArea) sArea.innerHTML='';
+  renderPdfPreview(c);
+  hitungUlangRKB();
+  evaluasiEskalasi();
+  if(c.pdfBase64 || c.pdfSlikBase64){
+    document.getElementById('resultsWrap').style.display='block';
+    evaluasiUlangSemua();
+  } else {
+    document.getElementById('resultsWrap').style.display='none';
+  }
+}
+function renderChecklistUI(c){
+  const wrap = document.getElementById('checklistWrap');
+  let groups = {};
+  REVIEW_CHECKLIST_ITEMS.forEach(it=>{ if(!groups[it.group]) groups[it.group]=[]; groups[it.group].push(it); });
+  let html='';
+  Object.keys(groups).forEach(g=>{
+    html += '<div class="field full"><label style="text-transform:none;font-size:11.5px;color:var(--navy-2);">'+g+'</label>';
+    groups[g].forEach(it=>{
+      const checked = c.checklist && c.checklist[it.key] ? 'checked' : '';
+      html += '<label><input type="checkbox" id="chk_'+it.key+'" '+checked+' onchange="autosave()"> '+it.label+'</label>';
+    });
+    html += '</div>';
+  });
+  wrap.innerHTML = html;
+}
+function autosave(){
+  let cases = loadCases(); const idx = cases.findIndex(c=>c.id===currentId); if(idx<0) return;
+  const c = cases[idx];
+  FIELD_IDS.forEach(f=>{ const el = document.getElementById('f_'+f); if(el) c['f_'+f] = el.value; });
+  if(!c.checklist) c.checklist = {};
+  REVIEW_CHECKLIST_ITEMS.forEach(it=>{ const el = document.getElementById('chk_'+it.key); if(el) c.checklist[it.key] = el.checked; });
+  if(c.f_rekomendasiPusat){ c.status='selesai'; }
+  cases[idx]=c; saveCases(cases);
+  document.getElementById('caseTitleName').textContent = c.f_nama || '(Berkas Baru)';
+  const jam = new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('saveStatus').textContent = '\u2713 Tersimpan pukul '+jam;
+  showToast('Tersimpan \u2713');
+}
+function simpanManual(){ autosave(); showToast('Disimpan secara manual \u2713'); }
+
+/* =============== UPLOAD & EKSTRAKSI PDF =============== */
+document.addEventListener('DOMContentLoaded', function(){
+  const dz = document.getElementById('dropzone');
+  if(dz){
+    dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', ()=> dz.classList.remove('dragover'));
+    dz.addEventListener('drop', e=>{
+      e.preventDefault(); dz.classList.remove('dragover');
+      if(e.dataTransfer.files.length) handlePdfFile(e.dataTransfer.files[0]);
+    });
+  }
+  const dzSlik = document.getElementById('dropzoneSlik');
+  if(dzSlik){
+    dzSlik.addEventListener('dragover', e=>{ e.preventDefault(); dzSlik.classList.add('dragover'); });
+    dzSlik.addEventListener('dragleave', ()=> dzSlik.classList.remove('dragover'));
+    dzSlik.addEventListener('drop', e=>{
+      e.preventDefault(); dzSlik.classList.remove('dragover');
+      if(e.dataTransfer.files.length) handleSlikPdfFile(e.dataTransfer.files[0]);
+    });
+  }
+});
+function handlePdfUpload(evt){
+  const file = evt.target.files[0]; if(!file) return;
+  handlePdfFile(file);
+}
+function handleSlikPdfUpload(evt){
+  const file = evt.target.files[0]; if(!file) return;
+  handleSlikPdfFile(file);
+}
+function handlePdfFile(file){
+  if(file.type !== 'application/pdf'){ alert('File harus berformat PDF.'); return; }
+  document.getElementById('resultsWrap').style.display='none';
+  document.getElementById('pdfStatus').textContent = 'Membaca file "'+file.name+'"...';
+  const reader = new FileReader();
+  reader.onerror = function(){
+    document.getElementById('pdfStatus').textContent = 'Gagal membaca file dari perangkat. Silakan coba lagi.';
+  };
+  reader.onload = async function(e){
+    try{
+      const arrayBuffer = e.target.result;
+      const base64 = arrayBufferToBase64(arrayBuffer);
+      let text = '', pages = [];
+      try{
+        const res = await extractPdfText(arrayBuffer.slice(0), (msg)=>{ document.getElementById('pdfStatus').textContent = msg; });
+        text = res.text; pages = res.pages;
+      }catch(err){
+        console.error(err);
+        text = ''; pages = [];
+      }
+      let cases = loadCases(); const idx = cases.findIndex(c=>c.id===currentId);
+      if(idx>=0){
+        cases[idx].pdfName = file.name;
+        cases[idx].pdfBase64 = base64;
+        cases[idx].pdfText = text;
+        cases[idx].pdfPages = pages;
+        cases[idx].status = 'review';
+        saveCases(cases);
+      }
+      renderPdfPreviewFromFile(file, 'pdfPreviewWrap');
+      document.getElementById('retryOcrWrap').style.display='flex';
+      document.getElementById('pdfStatus').textContent = (text && text.trim().length>20)
+        ? 'Berkas utama "'+file.name+'" berhasil diunggah dan teks berhasil diperoleh.'
+        : 'Berkas utama "'+file.name+'" berhasil diunggah, namun teks tidak terbaca otomatis — silakan lengkapi form secara manual sambil melihat pratinjau PDF.';
+    }catch(fatalErr){
+      console.error('Kesalahan tak terduga saat memproses PDF:', fatalErr);
+      document.getElementById('pdfStatus').textContent = 'Terjadi kendala saat memproses PDF ('+errMsg(fatalErr)+'). Berkas tetap bisa dilihat pratinjaunya; silakan lengkapi form secara manual.';
+    } finally {
+      jalankanPipelineLengkap();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function handleSlikPdfFile(file){
+  if(file.type !== 'application/pdf'){ alert('File harus berformat PDF.'); return; }
+  document.getElementById('pdfSlikStatus').textContent = 'Membaca file SLIK "'+file.name+'"...';
+  const reader = new FileReader();
+  reader.onerror = function(){
+    document.getElementById('pdfSlikStatus').textContent = 'Gagal membaca file dari perangkat. Silakan coba lagi.';
+  };
+  reader.onload = async function(e){
+    try{
+      const arrayBuffer = e.target.result;
+      const base64 = arrayBufferToBase64(arrayBuffer);
+      let text = '', pages = [];
+      try{
+        const res = await extractPdfText(arrayBuffer.slice(0), (msg)=>{ document.getElementById('pdfSlikStatus').textContent = msg; });
+        text = res.text; pages = res.pages;
+      }catch(err){
+        console.error(err);
+        text = ''; pages = [];
+      }
+      let cases = loadCases(); const idx = cases.findIndex(c=>c.id===currentId);
+      if(idx>=0){
+        cases[idx].pdfSlikName = file.name;
+        cases[idx].pdfSlikBase64 = base64;
+        cases[idx].pdfSlikText = text;
+        cases[idx].pdfSlikPages = pages;
+        saveCases(cases);
+      }
+      renderPdfPreviewFromFile(file, 'pdfSlikPreviewWrap');
+      document.getElementById('retryOcrWrap').style.display='flex';
+      document.getElementById('pdfSlikStatus').textContent = (text && text.trim().length>20)
+        ? 'Berkas SLIK "'+file.name+'" berhasil diunggah dan teks berhasil diperoleh.'
+        : 'Berkas SLIK "'+file.name+'" berhasil diunggah, namun teks tidak terbaca otomatis — silakan lengkapi form secara manual.';
+      const el = document.getElementById('chk_slik'); if(el) el.checked = true;
+    }catch(fatalErr){
+      console.error('Kesalahan tak terduga saat memproses PDF SLIK:', fatalErr);
+      document.getElementById('pdfSlikStatus').textContent = 'Terjadi kendala saat memproses PDF SLIK ('+errMsg(fatalErr)+'). Silakan lengkapi form secara manual.';
+    } finally {
+      jalankanPipelineLengkap();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function jalankanPipelineLengkap(){
+  const cases = loadCases(); const c = cases.find(x=>x.id===currentId); if(!c) return;
+  const gabunganTeks = (c.pdfText||'') + '\n' + (c.pdfSlikText||'');
+  const punyaTeks = gabunganTeks.trim().length>20;
+
+  if(punyaTeks){
+    cobaDeteksiOtomatis(gabunganTeks);
+    autoDetectChecklist(gabunganTeks);
+    const note = document.getElementById('detectNote');
+    if(note.style.display!=='block'){ note.style.display='block'; }
+  } else {
+    const note = document.getElementById('detectNote');
+    note.style.display='block';
+    note.innerHTML = '\u26a0\ufe0f Tidak ada teks yang berhasil diperoleh dari PDF (baik langsung maupun via OCR). Hasil di bawah dibuat semaksimal mungkin dari data yang tersedia. Kalau ada yang perlu dikoreksi, buka "Detail & Koreksi Manual" di bawah.';
+  }
+
+  document.getElementById('resultsWrap').style.display='block';
+  autosave();
+  evaluasiUlangSemua();
+  document.getElementById('resultsWrap').scrollIntoView({behavior:'smooth', block:'start'});
+  showToast('Hasil review otomatis siap \u2713');
+}
+function evaluasiUlangSemua(){
+  evaluasiEskalasi();
+  hitungUlangRKB();
+  jalankanReviewOtomatis();
+  const cChk = loadCases().find(x=>x.id===currentId);
+  if(cChk){
+    const hasilKonsistensi = cekKonsistensiAntarDokumen(cChk);
+    let cases = loadCases(); const idx = cases.findIndex(x=>x.id===currentId);
+    if(idx>=0){ cases[idx].konsistensi = hasilKonsistensi; saveCases(cases); }
+    renderKonsistensi(hasilKonsistensi);
+  }
+  buatDraftCatatanKomite();
+  renderCatatanReview();
+}
+function autoDetectChecklist(text){
+  const t = text.toLowerCase();
+  const kw = {
+    lak: ['laporan analisa kredit','lak kur'],
+    cm: ['credit memorandum','memorandum kredit'],
+    slik: ['slik','bi checking','sistem layanan informasi keuangan'],
+    formulirPermohonan: ['formulir permohonan'],
+    ktp: ['ktp','kartu tanda penduduk'],
+    kk: ['kartu keluarga'],
+    sku: ['surat keterangan usaha'],
+    nib: ['nib','nomor induk berusaha'],
+    npwp: ['npwp'],
+    agunanDok: ['shm','shgb','bpkb','sertifikat'],
+    fotoLokasi: ['foto lokasi','foto usaha','denah'],
+    suratPermohonanBermeterai: ['bermeterai','bermaterai']
+  };
+  let detectedCount = 0;
+  Object.keys(kw).forEach(key=>{
+    const found = kw[key].some(k=>t.includes(k));
+    if(found){ const el = document.getElementById('chk_'+key); if(el && !el.checked){ el.checked = true; detectedCount++; } }
+  });
+  return detectedCount;
+}
+function arrayBufferToBase64(buffer){
+  let binary = ''; const bytes = new Uint8Array(buffer);
+  const chunk = 0x8000;
+  for(let i=0;i<bytes.length;i+=chunk){ binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk)); }
+  return btoa(binary);
+}
+function base64ToArrayBuffer(base64){
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for(let i=0;i<len;i++){ bytes[i] = binary.charCodeAt(i); }
+  return bytes.buffer;
+}
+async function cobaOcrUlang(){
+  const c = loadCases().find(x=>x.id===currentId); if(!c) return;
+  if(!c.pdfBase64 && !c.pdfSlikBase64){ showToast('Belum ada berkas PDF yang diunggah.'); return; }
+  showToast('Membaca ulang PDF dengan OCR (resolusi lebih tinggi)...');
+  if(c.pdfBase64){
+    document.getElementById('pdfStatus').textContent = 'Membaca ulang berkas utama...';
+    const buf = base64ToArrayBuffer(c.pdfBase64);
+    const res = await extractPdfText(buf, (msg)=>{ document.getElementById('pdfStatus').textContent = msg; });
+    let cases = loadCases(); const idx = cases.findIndex(x=>x.id===currentId);
+    if(idx>=0){ cases[idx].pdfText = res.text; cases[idx].pdfPages = res.pages; saveCases(cases); }
+    document.getElementById('pdfStatus').textContent = (res.text && res.text.trim().length>20) ? 'Berkas utama: teks berhasil diperoleh pada percobaan ulang.' : 'Berkas utama: teks masih belum terbaca.';
+  }
+  if(c.pdfSlikBase64){
+    document.getElementById('pdfSlikStatus').textContent = 'Membaca ulang berkas SLIK...';
+    const buf2 = base64ToArrayBuffer(c.pdfSlikBase64);
+    const res2 = await extractPdfText(buf2, (msg)=>{ document.getElementById('pdfSlikStatus').textContent = msg; });
+    let cases2 = loadCases(); const idx2 = cases2.findIndex(x=>x.id===currentId);
+    if(idx2>=0){ cases2[idx2].pdfSlikText = res2.text; cases2[idx2].pdfSlikPages = res2.pages; saveCases(cases2); }
+    document.getElementById('pdfSlikStatus').textContent = (res2.text && res2.text.trim().length>20) ? 'Berkas SLIK: teks berhasil diperoleh pada percobaan ulang.' : 'Berkas SLIK: teks masih belum terbaca.';
+  }
+  jalankanPipelineLengkap();
+}
+async function extractPdfText(arrayBuffer, progressCb){
+  // Mengembalikan {text, pages} — pages adalah array teks per halaman, dipakai untuk
+  // memecah PDF gabungan menjadi per-dokumen (KTP, KK, LAK, CM, dst) demi cek konsistensi.
+  if(!window.pdfjsLib) return {text:'', pages:[]};
+  let pdf;
+  try{
+    pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+  }catch(e){
+    if(progressCb) progressCb('Gagal membuka PDF: '+errMsg(e));
+    return {text:'', pages:[]};
+  }
+  const maxPages = Math.min(pdf.numPages, 20);
+  let pages = [];
+  try{
+    for(let i=1;i<=maxPages;i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map(item=>item.str);
+      pages.push(strings.join(' '));
+    }
+  }catch(e){
+    if(progressCb) progressCb('Sebagian teks gagal dibaca langsung: '+errMsg(e));
+  }
+  let fullText = pages.join('\n');
+  const meaningfulLength = fullText.replace(/\s/g,'').length;
+  const avgPerPage = meaningfulLength / maxPages;
+  if(avgPerPage < 20){
+    // Hampir tidak ada teks -> kemungkinan besar hasil scan/gambar. Coba OCR.
+    if(progressCb) progressCb('Teks PDF tidak terbaca langsung (kemungkinan berkas hasil scan) — mencoba OCR, mohon tunggu...');
+    try{
+      pages = await ocrPdfPages(pdf, maxPages, progressCb);
+      fullText = pages.join('\n');
+    }catch(e){
+      if(progressCb) progressCb('OCR gagal dijalankan: '+errMsg(e)+' — silakan isi form secara manual.');
+      pages = []; fullText = '';
+    }
+  }
+  return {text: fullText, pages: pages};
+}
+async function ocrPdfPages(pdf, maxPages, progressCb){
+  // Mengembalikan array teks per halaman (bukan satu string gabungan)
+  if(!window.Tesseract){ if(progressCb) progressCb('OCR tidak tersedia (library gagal dimuat — cek koneksi internet, atau file ini sedang dibuka di dalam pratinjau/preview yang membatasi fitur Web Worker; buka file HTML ini langsung di browser Chrome/Safari untuk hasil terbaik).'); return []; }
+  let pages = [];
+  let worker;
+  try{
+    worker = await Tesseract.createWorker('ind+eng', 1, {
+      logger: m=>{ if(progressCb && m && m.status) progressCb('OCR: '+m.status+(m.progress!=null? ' ('+Math.round(m.progress*100)+'%)':'')); }
+    });
+  }catch(e){
+    if(progressCb) progressCb('OCR gagal dimuat: '+errMsg(e)+' — kemungkinan Web Worker diblokir oleh browser/pratinjau. Silakan isi form secara manual.');
+    return [];
+  }
+  const ocrPageLimit = Math.min(maxPages, 10); // batasi agar tidak terlalu lama di browser
+  for(let i=1;i<=ocrPageLimit;i++){
+    if(progressCb) progressCb('OCR halaman '+i+' dari '+ocrPageLimit+' (resolusi tinggi + penajaman kontras)...');
+    try{
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({scale: 3.0}); // resolusi lebih tinggi untuk hasil scan buram
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width; canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      await page.render({canvasContext: ctx, viewport: viewport}).promise;
+      preprocessCanvasForOCR(ctx, canvas.width, canvas.height);
+      const ret = await worker.recognize(canvas);
+      pages.push(ret && ret.data ? ret.data.text : '');
+    }catch(e){ console.error('OCR halaman '+i+' gagal:', errMsg(e)); pages.push(''); }
+  }
+  try{ await worker.terminate(); }catch(e){}
+  return pages;
+}
+function preprocessCanvasForOCR(ctx, w, h){
+  // Ubah ke grayscale + pertajam kontras (bantu OCR baca hasil scan yang buram/pudar)
+  try{
+    const imgData = ctx.getImageData(0,0,w,h);
+    const d = imgData.data;
+    const contrast = 1.5; // faktor penajaman kontras
+    const intercept = 128*(1-contrast);
+    for(let i=0;i<d.length;i+=4){
+      const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+      let v = gray*contrast + intercept;
+      v = v<0 ? 0 : v>255 ? 255 : v;
+      d[i] = d[i+1] = d[i+2] = v;
+    }
+    ctx.putImageData(imgData,0,0);
+  }catch(e){ console.error('Gagal preprocessing gambar untuk OCR:', errMsg(e)); }
+}
+function renderPdfPreview(c){
+  document.getElementById('pdfStatus').textContent = c.pdfName ? ('Berkas utama tersimpan: '+c.pdfName) : '';
+  const wrap = document.getElementById('pdfPreviewWrap');
+  wrap.innerHTML = c.pdfBase64 ? '<div class="pdf-preview"><embed src="data:application/pdf;base64,'+c.pdfBase64+'" type="application/pdf"></div>' : '';
+
+  document.getElementById('pdfSlikStatus').textContent = c.pdfSlikName ? ('Berkas SLIK tersimpan: '+c.pdfSlikName) : '';
+  const wrapSlik = document.getElementById('pdfSlikPreviewWrap');
+  wrapSlik.innerHTML = c.pdfSlikBase64 ? '<div class="pdf-preview"><embed src="data:application/pdf;base64,'+c.pdfSlikBase64+'" type="application/pdf"></div>' : '';
+
+  document.getElementById('retryOcrWrap').style.display = (c.pdfBase64 || c.pdfSlikBase64) ? 'flex' : 'none';
+}
+function renderPdfPreviewFromFile(file, wrapId){
+  const url = URL.createObjectURL(file);
+  document.getElementById(wrapId).innerHTML = '<div class="pdf-preview"><embed src="'+url+'" type="application/pdf"></div>';
+}
+
+/* =============== SEGMENTASI PER-DOKUMEN (untuk cek konsistensi) =============== */
+// PDF gabungan (LAK + persyaratan) dipecah per halaman berdasarkan penanda judul dokumen,
+// supaya data yang diekstrak bisa dibandingkan ANTAR dokumen, bukan cuma dianggap satu blok teks.
+const DOC_SIGNATURES = [
+  {key:'lak', label:'Laporan Analisa Kredit (LAK)', re:/LAPORAN\s+ANALIS[AE]\s+KREDIT/i},
+  {key:'cm', label:'Credit Memorandum (CM)', re:/CREDIT\s+MEMORANDUM|MEMORANDUM\s+KREDIT/i},
+  {key:'formulirPermohonan', label:'Formulir Permohonan Kredit', re:/FORMULIR\s+PERMOHONAN/i},
+  {key:'suratPermohonanBermeterai', label:'Surat Permohonan Kredit Bermeterai', re:/SURAT\s+PERMOHONAN\s+KREDIT/i},
+  {key:'kk', label:'Kartu Keluarga', re:/KARTU\s+KELUARGA/i},
+  {key:'ktp', label:'KTP Pemohon/Pasangan', re:/KARTU\s+TANDA\s+PENDUDUK/i},
+  {key:'sku', label:'Surat Keterangan Usaha', re:/SURAT\s+KETERANGAN\s+USAHA/i},
+  {key:'nib', label:'NIB / Izin Usaha', re:/NOMOR\s+INDUK\s+BERUSAHA/i},
+  {key:'npwp', label:'NPWP', re:/NOMOR\s+POKOK\s+WAJIB\s+PAJAK/i},
+  {key:'agunanDok', label:'Dokumen Agunan (SHM/BPKB)', re:/SERTIFIKAT\s+HAK\s+(MILIK|GUNA)|BPKB/i},
+  {key:'rab', label:'Rencana Anggaran Biaya (RAB)', re:/RENCANA\s+ANGGARAN\s+BIAYA/i}
+];
+function labelForKey(key){ const f = DOC_SIGNATURES.find(s=>s.key===key); return f ? f.label : 'Bagian Tidak Teridentifikasi'; }
+function segmentDocuments(c){
+  const segs = [];
+  let currentType = null, currentPages = [];
+  function flush(){
+    if(currentPages.length){ segs.push({key: currentType, label: labelForKey(currentType), text: currentPages.join('\n'), halaman: currentPages.length}); }
+    currentPages = [];
+  }
+  (c.pdfPages||[]).forEach(pageText=>{
+    let matched = null;
+    for(const sig of DOC_SIGNATURES){ if(sig.re.test(pageText)){ matched = sig.key; break; } }
+    if(matched && matched!==currentType){ flush(); currentType = matched; }
+    currentPages.push(pageText);
+  });
+  flush();
+  if((c.pdfSlikPages||[]).length){
+    segs.push({key:'slik', label:'Hasil SLIK OJK / BI Checking', text:(c.pdfSlikPages||[]).join('\n'), halaman:(c.pdfSlikPages||[]).length});
+  }
+  return segs;
+}
+function extractFieldsHeuristik(text){
+  const out = {};
+  let m;
+  m = text.match(/Nama\s*(?:Debitur|Lengkap|Pemohon)?\s*[:\-]?\s*([A-Za-z .'\-]{3,50})/i); if(m) out.nama = m[1].trim();
+  m = text.match(/(?:NIK|Nomor Identitas|Nomor Induk Kependudukan)[^\d]{0,20}(\d{10,16})/i); if(m) out.nik = m[1];
+  m = text.match(/NPWP[^\d]{0,15}(\d{10,16})/i); if(m) out.npwp = m[1];
+  m = text.match(/Plafon[^\d]{0,25}Rp?\.?\s?([\d.,]{5,20})/i); if(m) out.plafon = parseAngka(m[1]);
+  m = text.match(/Status\s*(?:Perkawinan|Kawin)\s*[:\-]?\s*(Belum\s*Kawin|Kawin|Menikah|Cerai\s*Hidup|Cerai\s*Mati)/i); if(m) out.statusKawin = m[1].trim();
+  m = text.match(/Nama\s*(?:Pasangan|Suami|Istri)\s*[:\-]?\s*([A-Za-z .'\-]{3,50})/i); if(m) out.namaPasangan = m[1].trim();
+  return out;
+}
+/* =============== CEK KONSISTENSI DATA ANTAR DOKUMEN =============== */
+function cekKonsistensiAntarDokumen(c){
+  const segs = segmentDocuments(c);
+  const perField = {nama:[], nik:[], plafon:[], npwp:[]};
+  let statusKawinFound = null, pasanganFound = false;
+  const segDetail = segs.map(s=>{
+    const f = extractFieldsHeuristik(s.text);
+    if(f.nama) perField.nama.push({label:s.label, value:f.nama});
+    if(f.nik) perField.nik.push({label:s.label, value:f.nik});
+    if(f.plafon) perField.plafon.push({label:s.label, value:f.plafon});
+    if(f.npwp) perField.npwp.push({label:s.label, value:f.npwp});
+    if(f.statusKawin) statusKawinFound = f.statusKawin;
+    if(f.namaPasangan) pasanganFound = true;
+    return {label:s.label, halaman:s.halaman, nama:f.nama, nik:f.nik, plafon:f.plafon};
+  });
+
+  const flags = [];
+  const nikUnik = [...new Set(perField.nik.map(x=>x.value.replace(/\D/g,'')))];
+  if(nikUnik.length>1) flags.push({t:'NIK TIDAK KONSISTEN antar dokumen: '+perField.nik.map(x=>x.label+' = '+x.value).join(' | ')+'. Periksa kemungkinan berkas tertukar/salah debitur.', c:'flag-bad'});
+  else if(nikUnik.length===1 && perField.nik.length>=2) flags.push({t:'NIK konsisten pada '+perField.nik.length+' dokumen yang terbaca ('+perField.nik.map(x=>x.label).join(', ')+').', c:'flag-ok'});
+
+  const namaUnik = [...new Set(perField.nama.map(x=>x.value.trim().toUpperCase().replace(/\s+/g,' ')))];
+  if(namaUnik.length>1) flags.push({t:'Nama debitur TIDAK KONSISTEN antar dokumen: '+perField.nama.map(x=>x.label+' = "'+x.value+'"').join(' | ')+'.', c:'flag-bad'});
+  else if(namaUnik.length===1 && perField.nama.length>=2) flags.push({t:'Nama debitur konsisten pada '+perField.nama.length+' dokumen yang terbaca ('+perField.nama.map(x=>x.label).join(', ')+').', c:'flag-ok'});
+
+  const plafonVals = perField.plafon.map(x=>x.value).filter(v=>v);
+  if(plafonVals.length>1){
+    const mn=Math.min(...plafonVals), mx=Math.max(...plafonVals);
+    if(mx>0 && (mx-mn)/mx > 0.01) flags.push({t:'Plafon BERBEDA antar dokumen: '+perField.plafon.map(x=>x.label+' = '+fmtRp(x.value)).join(' | ')+'.', c:'flag-bad'});
+    else flags.push({t:'Plafon konsisten antar dokumen yang terbaca ('+fmtRp(plafonVals[0])+').', c:'flag-ok'});
+  }
+
+  if(statusKawinFound && /kawin|menikah/i.test(statusKawinFound) && !/belum/i.test(statusKawinFound) && !pasanganFound){
+    flags.push({t:'Status debitur terdeteksi "'+statusKawinFound+'" namun tidak ditemukan nama pasangan pada dokumen yang terbaca — periksa kemungkinan penghasilan/kewajiban pasangan belum diperhitungkan dalam DSCR (potensi RKB overstatement).', c:'flag-warn'});
+  }
+
+  // NPWP wajib sama dengan NIK untuk perorangan (ketentuan NPWP baru = NIK)
+  if(perField.npwp.length && nikUnik.length){
+    const npwpBersih = [...new Set(perField.npwp.map(x=>x.value.replace(/\D/g,'')))];
+    npwpBersih.forEach(np=>{
+      if(!nikUnik.includes(np)) flags.push({t:'NPWP ('+np+') tidak sama dengan NIK ('+nikUnik.join('/')+') — untuk perorangan, NPWP terbaru seharusnya identik dengan NIK. Periksa kemungkinan salah ketik/salah unggah.', c:'flag-bad'});
+    });
+  }
+
+  // Kontradiksi pekerjaan: dokumen pendukung kelurahan sering pakai template lama ("Pelajar/Mahasiswa")
+  // sementara dokumen inti (LAK/CM/Formulir) menyatakan debitur berusaha aktif (petani/dagang/dst).
+  const gabunganSemua = segs.map(s=>s.text).join(' ').toLowerCase();
+  const adaUsahaAktif = /petani|pedagang|wiraswasta|usaha dagang|pengusaha|peternak/.test(gabunganSemua);
+  const adaStatusNonUsaha = /\bpelajar\b|\bmahasiswa\b|belum\s*\/?\s*tidak\s*bekerja/.test(gabunganSemua);
+  if(adaUsahaAktif && adaStatusNonUsaha){
+    flags.push({t:'Data pekerjaan tidak konsisten: sebagian dokumen mencantumkan "Pelajar/Mahasiswa/Belum Bekerja", sementara dokumen lain menyatakan debitur berusaha aktif (petani/dagang/dst). Kemungkinan template surat kelurahan belum diperbarui — periksa ke instansi penerbit.', c:'flag-warn'});
+  }
+
+  // RAB: judul komoditas vs isi RAB harus sejenis (indikasi template komoditas lain terpakai ulang)
+  const CROP_GROUPS = {padi:['padi','gabah','beras','giling'], cabai:['cabai','cabe'], jagung:['jagung'], kopi:['kopi'], kakao:['kakao','coklat','cokelat'], bawang:['bawang','wortel','sayur']};
+  function komoditasDominan(txt){
+    const low = txt.toLowerCase();
+    let best=null, bestN=0;
+    Object.keys(CROP_GROUPS).forEach(k=>{
+      const n = CROP_GROUPS[k].reduce((s,w)=> s + (low.split(w).length-1), 0);
+      if(n>bestN){ bestN=n; best=k; }
+    });
+    return bestN>0 ? best : null;
+  }
+  const rabSeg = segs.find(s=>s.key==='rab');
+  if(rabSeg){
+    const judul = rabSeg.text.slice(0,150);
+    const isi = rabSeg.text.slice(150);
+    const cropJudul = komoditasDominan(judul);
+    const cropIsi = komoditasDominan(isi);
+    if(cropJudul && cropIsi && cropJudul!==cropIsi){
+      flags.push({t:'Judul RAB menyebut komoditas "'+cropJudul+'" namun isi rincian biaya RAB didominasi istilah "'+cropIsi+'" — kemungkinan template RAB komoditas lain terpakai ulang tanpa diganti judulnya.', c:'flag-warn'});
+    }
+  }
+
+  if(!flags.length) flags.push({t:'Belum cukup data yang berhasil terbaca dari tiap bagian dokumen untuk dibandingkan — periksa manual, atau coba "Baca Ulang PDF (OCR)".', c:'flag-warn'});
+
+  return {segDetail, flags};
+}
+function renderKonsistensi(hasil){
+  const area = document.getElementById('konsistensiArea');
+  if(area) area.innerHTML = hasil.flags.map(f=>'<div class="flag '+f.c+'">'+f.t+'</div>').join('');
+  const wrap = document.getElementById('segmentTableWrap');
+  if(wrap){
+    const rows = hasil.segDetail.map(s=>'<tr><td>'+s.label+'</td><td>'+s.halaman+'</td><td>'+(s.nama||'-')+'</td><td>'+(s.nik||'-')+'</td><td>'+(s.plafon?fmtRp(s.plafon):'-')+'</td></tr>').join('');
+    wrap.innerHTML = rows ? ('<table class="mini-table"><thead><tr><th>Bagian Dokumen Terdeteksi</th><th>Jml Hal.</th><th>Nama Terbaca</th><th>NIK Terbaca</th><th>Plafon Terbaca</th></tr></thead><tbody>'+rows+'</tbody></table>') : '<div class="subhead">Belum ada bagian dokumen yang berhasil dipisahkan (upload/OCR ulang PDF).</div>';
+  }
+}
+
+/* =============== DETEKSI OTOMATIS (HEURISTIK) =============== */
+function cobaDeteksiOtomatis(text){
+  const detected = {};
+  let m;
+  m = text.match(/Nama\s*(?:Debitur|Lengkap)\s*[:\-]?\s*([A-Za-z .'\-]{3,50})/i); if(m) detected.nama = m[1].trim();
+  m = text.match(/(?:NIK|Nomor Identitas)[^\d]{0,15}(\d{10,16})/i); if(m) detected.nik = m[1];
+  m = text.match(/Plafon[^\d]{0,25}Rp?\.?\s?([\d.,]{5,20})/i); if(m) detected.plafon = parseAngka(m[1]);
+  m = text.match(/Jangka Waktu[^\d]{0,15}(\d{1,3})\s*bulan/i); if(m) detected.jangkaWaktu = m[1];
+  m = text.match(/(\d{1,2}(?:[.,]\d{1,2})?)\s*%\s*(?:per tahun|p\.a|efektif)/i); if(m) detected.bunga = m[1].replace(',','.');
+  m = text.match(/Cabang\s*[:\/]?\s*([A-Za-z0-9 .'\-]{2,40})/i); if(m) detected.cabang = m[1].trim();
+  m = text.match(/Kol(?:ektibilitas)?\.?\s*(\d)\b/i); if(m) detected.kol = m[1];
+  m = text.match(/(?:RKB|DSCR)[^\d]{0,25}([\d]+[.,][\d]+)\s*x/i); if(m) detected.rkb = m[1].replace(',','.');
+  m = text.match(/Sektor(?:\s*Usaha)?\s*[:\-]?\s*([A-Za-z ,&\-]{3,50})/i); if(m) detected.sektor = m[1].trim();
+  const jenisMikro = /KUR\s*Mikro/i.test(text);
+  const jenisKecil = /KUR\s*Kecil/i.test(text);
+  if(jenisKecil && !jenisMikro) detected.jenisKur = 'Kecil';
+  else if(jenisMikro && !jenisKecil) detected.jenisKur = 'Mikro';
+
+  const found = Object.keys(detected).length;
+  const note = document.getElementById('detectNote');
+  if(found>0){
+    note.style.display='block';
+    note.innerHTML = '\ud83d\udd0e <strong>Terdeteksi otomatis dari PDF ('+found+' item)</strong> — mohon <u>verifikasi</u> terhadap dokumen asli sebelum melanjutkan. Nilai yang belum kosong tidak akan ditimpa.';
+    if(detected.nama && !document.getElementById('f_nama').value) document.getElementById('f_nama').value = detected.nama;
+    if(detected.nik && !document.getElementById('f_nik').value) document.getElementById('f_nik').value = detected.nik;
+    if(detected.plafon && !document.getElementById('f_plafon').value) document.getElementById('f_plafon').value = detected.plafon;
+    if(detected.jangkaWaktu && !document.getElementById('f_jangkaWaktu').value) document.getElementById('f_jangkaWaktu').value = detected.jangkaWaktu;
+    if(detected.bunga && !document.getElementById('f_bunga').value) document.getElementById('f_bunga').value = detected.bunga;
+    if(detected.cabang && !document.getElementById('f_cabangAsal').value) document.getElementById('f_cabangAsal').value = detected.cabang;
+    if(detected.kol) document.getElementById('f_kolektibilitas').value = detected.kol;
+    if(detected.rkb && !document.getElementById('f_rkbCabang').value) document.getElementById('f_rkbCabang').value = detected.rkb;
+    if(detected.sektor && !document.getElementById('f_sektor').value) document.getElementById('f_sektor').value = detected.sektor;
+    if(detected.jenisKur) document.getElementById('f_jenisKur').value = detected.jenisKur;
+  } else {
+    note.style.display='block';
+    note.innerHTML = '\u26a0\ufe0f Tidak ada data yang berhasil terdeteksi otomatis dari teks PDF (kemungkinan hasil scan/gambar). Silakan isi form secara manual sambil melihat pratinjau PDF di atas.';
+  }
+}
+function parseAngka(s){
+  // Hilangkan pemisah ribuan, dukung format 100.000.000 atau 100,000,000
+  const cleaned = s.replace(/[^\d]/g,'');
+  return cleaned ? Number(cleaned) : '';
+}
+
+/* =============== EVALUASI DASAR ESKALASI =============== */
+function evaluasiEskalasi(){
+  const npl = num('f_nplPersen');
+  const nplKonsolidasi = document.getElementById('f_statusNplKonsolidasi').value==='Ya' || npl>5;
+  const jenis = document.getElementById('f_jenisKur').value;
+  const plafon = num('f_plafon');
+  let alasan, valid;
+
+  if(jenis==='Mikro'){
+    if(nplKonsolidasi){
+      alasan = 'NPL Konsolidasi Cabang'+(npl?' ('+npl+'% > 5%)':'')+' — seluruh kredit dari cabang ini wajib direview Kantor Pusat.';
+      valid = true;
+    } else if(plafon>50000000){
+      if(plafon<=100000000){
+        alasan = 'Melebihi Limit Kewenangan Cabang untuk KUR Mikro (plafon '+fmtRp(plafon)+' > Rp50 juta).';
+        valid = true;
+      } else {
+        alasan = 'Plafon '+fmtRp(plafon)+' melebihi batas maksimum KUR Mikro (Rp100 juta) — periksa kembali, kemungkinan seharusnya diajukan sebagai KUR Kecil.';
+        valid = false;
+      }
+    } else {
+      alasan = 'TIDAK ADA DASAR ESKALASI YANG VALID — plafon ≤Rp50 juta dan cabang tidak berstatus NPL Konsolidasi. Seharusnya diputus di tingkat cabang. Perlu klarifikasi ke cabang pengusul.';
+      valid = false;
+    }
+  } else {
+    if(nplKonsolidasi){
+      alasan = 'NPL Konsolidasi Cabang'+(npl?' ('+npl+'% > 5%)':'')+' — seluruh kredit dari cabang ini wajib direview Kantor Pusat.';
+      valid = true;
+    } else {
+      alasan = 'TIDAK ADA DASAR ESKALASI YANG VALID — KUR Kecil dari cabang dengan NPL Konsolidasi ≤5% seharusnya diputus di tingkat cabang, bukan dieskalasi ke Pusat. Perlu klarifikasi ke cabang pengusul.';
+      valid = false;
+    }
+  }
+  document.getElementById('c_alasanEskalasi').textContent = alasan;
+  document.getElementById('c_validEskalasi').textContent = valid ? 'VALID — sesuai ketentuan eskalasi' : 'PERLU KLARIFIKASI — dasar eskalasi tidak jelas/tidak terpenuhi';
+
+  let cases = loadCases(); const idx = cases.findIndex(c=>c.id===currentId);
+  if(idx>=0){ cases[idx].eskalasi = {alasan, valid}; saveCases(cases); }
+}
+
+/* =============== HITUNG ULANG RKB/DSCR =============== */
+function hitungUlangRKB(){
+  const labaKotor = num('f_labaKotor'), biaya = num('f_biayaOperasional'), angsuran = num('f_angsuran');
+  const pendapatanBersih = labaKotor - biaya;
+  const rkbUlang = angsuran>0 ? pendapatanBersih/angsuran : 0;
+  document.getElementById('c_pendapatanBersihUlang').textContent = fmtRp(pendapatanBersih);
+  document.getElementById('c_rkbUlang').textContent = rkbUlang.toFixed(2)+'x';
+  const rkbCabang = num('f_rkbCabang');
+  const selisih = rkbCabang ? (rkbUlang-rkbCabang) : null;
+  document.getElementById('c_selisihRkb').textContent = selisih!=null ? (selisih>=0?'+':'')+selisih.toFixed(2)+'x' + (Math.abs(selisih)>0.15 ? ' — SELISIH SIGNIFIKAN, periksa kembali angka cabang' : ' (wajar)') : '-';
+  let cases = loadCases(); const idx = cases.findIndex(c=>c.id===currentId);
+  if(idx>=0){ cases[idx].rkbUlang = rkbUlang; cases[idx].pendapatanBersihUlang = pendapatanBersih; saveCases(cases); }
+}
+
+/* =============== REVIEW OTOMATIS (RED FLAGS) =============== */
+function jalankanReviewOtomatis(){
+  hitungUlangRKB();
+  const c = loadCases().find(x=>x.id===currentId); if(!c) return;
+  const flags = [];
+  const ev = c.eskalasi || {};
+  if(ev.valid===false) flags.push({t:'Dasar eskalasi belum jelas/tidak terpenuhi: '+ev.alasan, c:'flag-bad'});
+
+  const rkbUlang = c.rkbUlang || 0;
+  const rkbCabang = Number(c.f_rkbCabang)||0;
+  if(rkbCabang && Math.abs(rkbUlang-rkbCabang)>0.15) flags.push({t:'Selisih RKB/DSCR hasil hitung ulang Kantor Pusat ('+rkbUlang.toFixed(2)+'x) dengan perhitungan cabang ('+rkbCabang.toFixed(2)+'x) cukup signifikan — periksa kembali data keuangan cabang.', c:'flag-bad'});
+  if(rkbUlang<1) flags.push({t:'RKB/DSCR hasil review Kantor Pusat di bawah 1,00x — kapasitas bayar debitur tidak mencukupi.', c:'flag-bad'});
+  else if(rkbUlang<1.25 && c.f_jenisKur==='Kecil') flags.push({t:'RKB/DSCR ('+rkbUlang.toFixed(2)+'x) di bawah ambang covenant KUR Kecil (1,25x).', c:'flag-warn'});
+  else flags.push({t:'RKB/DSCR hasil review ('+rkbUlang.toFixed(2)+'x) memadai.', c:'flag-ok'});
+
+  const kol = Number(c.f_kolektibilitas)||1;
+  if(kol>=3) flags.push({t:'Kolektibilitas SLIK Kol '+kol+' — risiko tinggi, perlu perhatian khusus komite.', c:'flag-bad'});
+  const tunggakan = Number(c.f_tunggakan)||0;
+  if(tunggakan>0) flags.push({t:'Terdapat riwayat tunggakan '+tunggakan+' hari.', c:'flag-warn'});
+
+  const checklistMissing = REVIEW_CHECKLIST_ITEMS.filter(it=> !(c.checklist && c.checklist[it.key]));
+  if(checklistMissing.length){
+    flags.push({t:'Berkas belum lengkap — '+checklistMissing.length+' dokumen belum dicentang tersedia: '+checklistMissing.map(i=>i.label).join(', ')+'.', c:'flag-warn'});
+  } else {
+    flags.push({t:'Seluruh dokumen pada checklist telah dinyatakan lengkap.', c:'flag-ok'});
+  }
+
+  if(c.f_jenisKur==='Kecil' && !(c.checklist && c.checklist.agunanDok)) flags.push({t:'KUR Kecil namun dokumen agunan belum dinyatakan lengkap — agunan tambahan wajib untuk KUR Kecil.', c:'flag-bad'});
+
+  document.getElementById('flagArea').innerHTML = flags.map(f=>'<div class="flag '+f.c+'">'+f.t+'</div>').join('');
+}
+
+/* =============== DRAF OTOMATIS CATATAN KOMITE =============== */
+function buatDraftCatatanKomite(){
+  jalankanReviewOtomatis();
+  const c = loadCases().find(x=>x.id===currentId); if(!c) return;
+  const ev = c.eskalasi || {};
+  const rkbUlang = c.rkbUlang || 0;
+  const kol = c.f_kolektibilitas || '1';
+  const checklistMissing = REVIEW_CHECKLIST_ITEMS.filter(it=> !(c.checklist && c.checklist[it.key]));
+
+  let draft = 'Berkas KUR '+(c.f_jenisKur||'-')+' atas nama '+(c.f_nama||'-')+' (NIK '+(c.f_nik||'-')+') diajukan oleh Cabang '+(c.f_cabangAsal||'-')+' dengan plafon '+fmtRp(c.f_plafon)+' dan jangka waktu '+(c.f_jangkaWaktu||'-')+' bulan.\n\n';
+  draft += 'Dasar eskalasi: '+(ev.alasan||'-')+'\n\n';
+
+  const konsis = c.konsistensi || {flags:[]};
+  const konsisBad = konsis.flags.filter(f=>f.c==='flag-bad');
+  const konsisWarn = konsis.flags.filter(f=>f.c==='flag-warn');
+  let konsisText;
+  if(konsisBad.length) konsisText = 'DITEMUKAN KETIDAKSESUAIAN DATA ANTAR DOKUMEN — '+konsisBad.map(f=>f.t).join(' ');
+  else if(konsisWarn.length) konsisText = 'Perlu klarifikasi lebih lanjut — '+konsisWarn.map(f=>f.t).join(' ');
+  else konsisText = 'Tidak ditemukan ketidaksesuaian data antar dokumen pada pengecekan otomatis (nama/NIK/plafon konsisten pada bagian yang berhasil terbaca).';
+  draft += 'Hasil cek konsistensi data antar dokumen: '+konsisText+'\n\n';
+
+  draft += 'Hasil review Kantor Pusat: RKB/DSCR dihitung ulang sebesar '+rkbUlang.toFixed(2)+'x'+(c.f_rkbCabang? ' (versi cabang: '+Number(c.f_rkbCabang).toFixed(2)+'x)':'')+'. Kolektibilitas SLIK tertinggi 24 bulan terakhir: Kol '+kol+'.\n\n';
+  draft += checklistMissing.length ? ('Kelengkapan berkas: masih terdapat '+checklistMissing.length+' dokumen yang belum dinyatakan lengkap ('+checklistMissing.map(i=>i.label).join(', ')+').\n\n') : 'Kelengkapan berkas: seluruh dokumen telah dinyatakan lengkap.\n\n';
+  let kesimpulanBagian = ev.valid ? 'dasar eskalasi terpenuhi' : 'dasar eskalasi PERLU DIKLARIFIKASI ke cabang';
+  if(konsisBad.length) kesimpulanBagian += ', DAN terdapat ketidaksesuaian data antar dokumen yang wajib diklarifikasi ke cabang sebelum diputus';
+  draft += 'Kesimpulan sementara: '+kesimpulanBagian+'. Direkomendasikan untuk '+(document.getElementById('f_rekomendasiPusat').value || '[lengkapi rekomendasi]')+'.';
+
+  document.getElementById('f_catatanUntukKomite').value = draft;
+  autosave();
+  showToast('Draf catatan komite dibuat — silakan diperiksa & diedit \u2713');
+}
+
+/* =============== CETAK: CATATAN REVIEW UNTUK KOMITE =============== */
+function renderCatatanReview(){
+  const c = loadCases().find(x=>x.id===currentId); if(!c) return;
+  const ev = c.eskalasi || {};
+  const rkbUlang = c.rkbUlang || 0;
+
+  let checklistHtml = '';
+  let groups = {};
+  REVIEW_CHECKLIST_ITEMS.forEach(it=>{ if(!groups[it.group]) groups[it.group]=[]; groups[it.group].push(it); });
+  Object.keys(groups).forEach(g=>{
+    checklistHtml += '<tr><td colspan="2" style="font-weight:700;background:#f7f9fc;">'+g+'</td></tr>';
+    groups[g].forEach(it=>{
+      const mark = (c.checklist && c.checklist[it.key]) ? '\u2611 Ada' : '\u2610 Tidak Ada';
+      checklistHtml += '<tr><td>'+it.label+'</td><td>'+mark+'</td></tr>';
+    });
+  });
+
+  const html = '<div class="lak-doc">' +
+    '<div class="lak-head"><div class="logo">bankNTT</div>' +
+    '<div class="titleblock"><h4>CATATAN REVIEW KANTOR PUSAT UNTUK KOMITE</h4><div class="sub2">KUR '+(c.f_jenisKur||'')+' — Divisi Kredit Mikro, Kecil dan Konsumer</div></div>' +
+    '<div class="docmeta"><div>Tanggal: '+new Date().toLocaleDateString('id-ID')+'</div><div>Analis Pusat: '+getCurrentAO()+'</div><div>Cabang Asal: '+(c.f_cabangAsal||'-')+'</div></div></div>' +
+
+    '<div class="lak-section"><h5>A. IDENTITAS DEBITUR & FASILITAS</h5><table class="lak-table">' +
+    '<tr><td class="k">Nama Debitur</td><td>'+(c.f_nama||'-')+'</td><td class="k">NIK</td><td>'+(c.f_nik||'-')+'</td></tr>' +
+    '<tr><td class="k">Cabang / AO Pengusul</td><td>'+(c.f_cabangAsal||'-')+' / '+(c.f_aoPengusulCabang||'-')+'</td><td class="k">Sektor Usaha</td><td>'+(c.f_sektor||'-')+'</td></tr>' +
+    '<tr><td class="k">Jenis KUR</td><td>'+(c.f_jenisKur||'-')+'</td><td class="k">Plafon</td><td>'+fmtRp(c.f_plafon)+'</td></tr>' +
+    '<tr><td class="k">Jangka Waktu</td><td>'+(c.f_jangkaWaktu||'-')+' bulan</td><td class="k">Bunga</td><td>'+(c.f_bunga||'-')+'%/tahun</td></tr>' +
+    '</table></div>' +
+
+    '<div class="lak-section"><h5>B. DASAR ESKALASI</h5><table class="lak-table">' +
+    '<tr><td class="k">Status NPL Konsolidasi Cabang</td><td>'+(c.f_statusNplKonsolidasi||'-')+(c.f_nplPersen? ' ('+c.f_nplPersen+'%)':'')+'</td></tr>' +
+    '<tr><td class="k">Alasan Eskalasi</td><td>'+(ev.alasan||'-')+'</td></tr>' +
+    '<tr><td class="k">Validitas Eskalasi</td><td><strong>'+(ev.valid? 'VALID':'PERLU KLARIFIKASI')+'</strong></td></tr>' +
+    '</table></div>' +
+
+    '<div class="lak-section"><h5>C. KONSISTENSI DATA ANTAR DOKUMEN</h5><table class="lak-table">' +
+    ((c.konsistensi && c.konsistensi.flags && c.konsistensi.flags.length) ?
+      c.konsistensi.flags.map(f=>'<tr><td>'+(f.c==='flag-bad'?'\u26a0 TIDAK KONSISTEN: ':f.c==='flag-warn'?'\u25b3 PERLU KLARIFIKASI: ':'\u2713 ')+f.t+'</td></tr>').join('')
+      : '<tr><td>Belum dijalankan pengecekan konsistensi otomatis.</td></tr>') +
+    '</table></div>' +
+
+    '<div class="lak-section"><h5>D. ANALISA CABANG vs. REVIEW KANTOR PUSAT</h5><table class="lak-table">' +
+    '<tr><th>Item</th><th>Versi Cabang</th><th>Hasil Review Pusat</th></tr>' +
+    '<tr><td>RKB / DSCR</td><td>'+(c.f_rkbCabang? Number(c.f_rkbCabang).toFixed(2)+'x':'-')+'</td><td>'+rkbUlang.toFixed(2)+'x</td></tr>' +
+    '<tr><td>Skor / Klasifikasi Profil Debitur</td><td>'+(c.f_skorProfilCabang||'-')+' / '+(c.f_profilLabelCabang||'-')+'</td><td>(dikonfirmasi sesuai catatan reviewer)</td></tr>' +
+    '<tr><td>Kolektibilitas SLIK</td><td colspan="2">Kol '+(c.f_kolektibilitas||'1')+' — Tunggakan '+(c.f_tunggakan||0)+' hari</td></tr>' +
+    '</table></div>' +
+
+    '<div class="lak-section"><h5>E. CHECKLIST KELENGKAPAN BERKAS</h5><table class="lak-table">' + checklistHtml +
+    '<tr><td class="k">Catatan Kelengkapan</td><td>'+(c.f_catatanKelengkapan||'-')+'</td></tr>' +
+    '</table></div>' +
+
+    '<div class="lak-section"><h5>F. HASIL REVIEW & REKOMENDASI</h5><table class="lak-table">' +
+    '<tr><td class="k">Kesesuaian Analisa Cabang</td><td>'+(c.f_reviewKesesuaian||'-')+'</td></tr>' +
+    '<tr><td class="k">Catatan Tambahan Reviewer Pusat</td><td>'+(c.f_reviewCatatanTambahan||'-').replace(/\n/g,'<br>')+'</td></tr>' +
+    '<tr><td class="k">Rekomendasi Kantor Pusat</td><td><strong>'+(c.f_rekomendasiPusat||'Belum diputuskan')+'</strong></td></tr>' +
+    '</table></div>' +
+
+    '<div class="lak-section"><h5>G. CATATAN UNTUK KOMITE</h5><table class="lak-table"><tr><td>' +
+    (c.f_catatanUntukKomite||'-').replace(/\n/g,'<br>') +
+    '</td></tr></table></div>' +
+
+    '<div class="sig-grid" style="margin-top:16px;">' +
+    '<div><div class="role">Direview oleh</div><div class="line">'+getCurrentAO()+'<br>Analis — Divisi Kredit Mikro, Kecil dan Konsumer</div></div>' +
+    '<div><div class="role">Diperiksa oleh</div><div class="line">Kepala Divisi / Kabag terkait<br>Tanggal: ...........</div></div>' +
+    '<div><div class="role">Untuk Keputusan Komite</div><div class="line">Komite Kredit Kantor Pusat<br>Tanggal: ...........</div></div>' +
+    '</div>' +
+  '</div>';
+  document.getElementById('memoArea').innerHTML = html;
+}
+
+/* =============== INIT =============== */
+async function salinTeksEkstraksi(){
+  const c = loadCases().find(x=>x.id===currentId); if(!c) return;
+  const gabungan = 'BERKAS UTAMA: '+(c.pdfName||'-')+'\n\n'+(c.pdfText||'(teks belum terbaca)')+
+    (c.pdfSlikText ? ('\n\n---\nBERKAS SLIK: '+(c.pdfSlikName||'-')+'\n\n'+c.pdfSlikText) : '');
+  try{
+    await navigator.clipboard.writeText(gabungan);
+    showToast('Teks hasil ekstraksi disalin — tempel ke chat Claude.ai untuk ditinjau \u2713');
+  }catch(e){
+    showToast('Gagal menyalin otomatis — pilih & salin manual dari kotak yang muncul.');
+    const win = window.open('', '_blank');
+    if(win){ win.document.write('<pre style="white-space:pre-wrap;font-family:monospace;padding:20px;">'+gabungan.replace(/</g,'&lt;')+'</pre>'); }
+  }
+}
+if(getCurrentAO()){ initAfterLogin(); }
+</script>
+</body>
+</html>
